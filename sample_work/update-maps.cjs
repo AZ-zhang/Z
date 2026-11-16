@@ -1,0 +1,15 @@
+const fs = require('fs');
+const file = '考研政治学习小样.html';
+const rows = fs.readFileSync('sample_work/导图识别.jsonl', 'utf8').trim().split(/\r?\n/).map(JSON.parse);
+const index = rows.map(row => ({page:row.page,text:(row.lines || []).map(line => line.text.replace(/\s+/g, '')).join(' ')}));
+fs.writeFileSync('sample_work/导图检索.js', 'window.mapSearchIndex='+JSON.stringify(index)+';\n');
+let html = fs.readFileSync(file, 'utf8');
+html = html.replace('<script>\r\n', '<script src="sample_work/导图检索.js"></script><script>\r\n');
+if (!html.includes('src="sample_work/导图检索.js"')) html = html.replace('<script>\n', '<script src="sample_work/导图检索.js"></script><script>\n');
+html = html.replace('<span class="status">图谱第 14 页文字版</span></div>`)}', '<span class="status">图谱第 14 页文字版</span><button class="subtle" data-go="map-full:20">下一张：图谱第 15 页 →</button></div>`)}');
+html = html.replace('function fullMap(n){', 'function mapSearch(){return `<section class="notice"><label for="map-search">检索全部导图：</label> <input id="map-search" type="search" placeholder="输入知识点" aria-label="检索全部导图"> <div class="status">检索文字由机器识别，可能有错字或遗漏，请以原图为准。</div><div id="map-results" aria-live="polite"></div></section>`}function fullMap(n){');
+html = html.replace("return header('思维导图',`完整版 · PDF 第 ${n} 页 / 共 141 页`,'map')+sheet", "return header('思维导图',`完整版 · PDF 第 ${n} 页 / 共 141 页`,'map')+mapSearch()+sheet");
+const hook = "let mapSelect=document.querySelector('#map-page-select');";
+const search = `let searchInput=document.querySelector('#map-search');if(searchInput){searchInput.oninput=()=>{let q=searchInput.value.trim().replace(/\\s+/g,'');let results=document.querySelector('#map-results');if(!q){results.innerHTML='';return}let matches=(window.mapSearchIndex||[]).filter(row=>row.text.includes(q));results.innerHTML=matches.length?matches.map(row=>{let i=row.text.indexOf(q);return '<div><button class="subtle" data-map-result="'+row.page+'">PDF 第 '+row.page+' 页 →</button> '+esc(row.text.slice(Math.max(0,i-20),i+q.length+35))+'</div>'}).join(''):'未找到匹配内容；机器识别可能存在遗漏。';results.querySelectorAll('[data-map-result]').forEach(b=>b.onclick=()=>go('map-full:'+b.dataset.mapResult))}};`;
+html = html.replace(hook,search+hook);
+fs.writeFileSync(file,html);
